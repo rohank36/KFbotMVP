@@ -8,7 +8,7 @@ const bot = new Bot("7107203567:AAFse2-JV0wRB86tcP_M5KoonKFYPUFUA6E");
 const gpt = GPT.getInstance();
 
 //Help Menu Command
-const helpMenu = "<b>Help Menu</b>\n\nBlah blabh blagh balah asdf.";
+const helpMenu = "<b>Help Menu ⚙️</b>\nHere are the commands that allow you to log entries:\n\n \\pretrg for Pre Training Entries\n\n \\posttrg for Post Training Entries\n\n \\weeklygoals for Weekly Goal Entries\n\n For any bug reports or other concerns please reach out to: kaizenflotech@gmail.com";
 bot.command("help", async (ctx) => {
     await ctx.reply(helpMenu, {
         parse_mode: "HTML",
@@ -34,6 +34,20 @@ async function processPostTrg(userMsg: string){
 
 async function processWeeklyGoals(userMsg: string){
     console.log('in weeklygoals');
+    const prompt = "msg:"+userMsg;
+    const ourPrompt = "Acknowledge the users weekly goal message and prompt them to start thinking about how they will move closer to this goal each session during the week. End it by prompting them to log a /pretrg and /postrg entry, also note that you will message them if they forget."
+    const instruction = prompt + "\n\n" + ourPrompt;
+    console.log(instruction);
+    const chat = {
+        role:"assistant",
+        content: instruction
+    }
+    try{
+        const completion = await gpt.callGPT(chat);
+        return completion.choices[0].message.content;
+    }catch(error){
+        return errorHandler();
+    }
 }
 
 async function processUserInfo(userMsg: string) {
@@ -54,8 +68,22 @@ async function processUserInfo(userMsg: string) {
     }
 }
 
-async function processBadMsg(){
+async function processBadMsg(userMsg: string){
     console.log('bad message')
+    const prompt = "msg:"+userMsg;
+    const ourPrompt = "The user entered something without a tag. Acknowledge what they said but note that they have to use one of the valid tags: /pretrg, /posttrg, /weeklygoals. End by reminding them about the /help command in the menu."
+    const instruction = prompt + "\n\n" + ourPrompt;
+    console.log(instruction);
+    const chat = {
+        role:"assistant",
+        content: instruction
+    }
+    try{
+        const completion = await gpt.callGPT(chat);
+        return completion.choices[0].message.content;
+    }catch(error){
+        return errorHandler();
+    }
 }
 
 function errorHandler(){
@@ -74,18 +102,24 @@ bot.on("message", async (ctx)=>{
         const msg = ctx.message.text.toLowerCase();
         let res;
         if (/^\/pretrg\b/.test(msg)) {
-            res = processPreTrg(msg);
+            res = await processPreTrg(msg);
         } else if (/^\/posttrg\b/.test(msg)) {
-            res = processPostTrg(msg);
+            res = await processPostTrg(msg);
         } else if (/^\/weeklygoals\b/.test(msg)) {
-            res = processWeeklyGoals(msg);
+            res = await processWeeklyGoals(msg);
+            if(res){
+                await ctx.reply(res);
+            }
         } else if (/^\/userinfo\b/.test(msg)) {
             res = await processUserInfo(msg);
             if(res){
                 await ctx.reply(res);
             }
         } else {
-           res = processBadMsg();
+            res = await processBadMsg(msg);
+            if(res){
+                await ctx.reply(res);
+            }
         }   
         
         /*
