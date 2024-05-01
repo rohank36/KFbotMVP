@@ -7,7 +7,9 @@
     "dev": "ts-node-dev ./KFbot.ts"
   },
   "dependencies": {
-    "grammy": "^1.22.4"
+    "dotenv": "^16.4.5",
+    "grammy": "^1.22.4",
+    "openai": "^4.40.0"
   },
   "devDependencies": {
     "ts-node": "^10.9.2",
