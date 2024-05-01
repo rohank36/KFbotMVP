@@ -1,4 +1,5 @@
 import { Bot, InlineKeyboard } from "grammy";
+import { GPT } from './gpt';
 
 //Init bot 
 const bot = new Bot("7107203567:AAFse2-JV0wRB86tcP_M5KoonKFYPUFUA6E");
@@ -20,24 +21,38 @@ bot.command("start", async (ctx) => {
 })
 
 
-function processPreTrg(){
+async function processPreTrg(userMsg: string){
     console.log('in pretrg');
 }
 
-function processPostTrg(){
+async function processPostTrg(userMsg: string){
     console.log('in posttrg');
 }
 
-function processWeeklyGoals(){
+async function processWeeklyGoals(userMsg: string){
     console.log('in weeklygoals');
 }
 
-function processUserInfo(){
+async function processUserInfo(userMsg: string, gpt: GPT = new GPT()) {
     console.log('in userinfo');
+    const prompt = "msg:"+userMsg;
+    const ourPrompt = "Respond to the users message by acknowledging the details they mentioned and prompt them to log their weekly goals using /weeklygoals at the beginning of their message"
+    const instruction = prompt + "\n\n" + ourPrompt;
+    console.log(instruction);
+    const chat = {
+        role:"assistant",
+        content: instruction
+    }
+    const completion = await gpt.callGPT(chat);
+    return completion.choices[0].message.content;
 }
 
-function processBadMsg(){
+async function processBadMsg(){
     console.log('bad message')
+}
+
+function errorHandler(){
+    return "Something went wrong...";
 }
 
 //message handler
@@ -52,13 +67,18 @@ bot.on("message", async (ctx)=>{
         const msg = ctx.message.text.toLowerCase();
         let res;
         if (/^\/pretrg\b/.test(msg)) {
-            res = processPreTrg();
+            res = processPreTrg(msg);
         } else if (/^\/posttrg\b/.test(msg)) {
-            res = processPostTrg();
+            res = processPostTrg(msg);
         } else if (/^\/weeklygoals\b/.test(msg)) {
-            res = processWeeklyGoals();
+            res = processWeeklyGoals(msg);
         } else if (/^\/userinfo\b/.test(msg)) {
-            res = processUserInfo();
+            res = await processUserInfo(msg);
+            if(res){
+                await ctx.reply(res);
+            }else{
+                await ctx.reply(errorHandler());
+            }
         } else {
            res = processBadMsg();
         }   
