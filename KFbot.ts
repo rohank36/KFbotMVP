@@ -11,6 +11,14 @@ bot.command("help", async (ctx) => {
     });
 });
 
+//Start Command
+const startMenu = "<b>Start Menu</b>\n\nBlah blabh blagh balah asdf.";
+bot.command("start", async (ctx) => {
+    await ctx.reply(startMenu, {
+        parse_mode: "HTML",
+    });
+})
+
 //message handler
 bot.on("message", async (ctx)=>{
     console.log(
