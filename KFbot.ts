@@ -4,6 +4,9 @@ import { GPT } from './gpt';
 //Init bot 
 const bot = new Bot("7107203567:AAFse2-JV0wRB86tcP_M5KoonKFYPUFUA6E");
 
+//Init GPT instance
+const gpt = GPT.getInstance();
+
 //Help Menu Command
 const helpMenu = "<b>Help Menu</b>\n\nBlah blabh blagh balah asdf.";
 bot.command("help", async (ctx) => {
@@ -20,7 +23,7 @@ bot.command("start", async (ctx) => {
     });
 })
 
-
+//Processing user messages
 async function processPreTrg(userMsg: string){
     console.log('in pretrg');
 }
@@ -33,7 +36,7 @@ async function processWeeklyGoals(userMsg: string){
     console.log('in weeklygoals');
 }
 
-async function processUserInfo(userMsg: string, gpt: GPT = new GPT()) {
+async function processUserInfo(userMsg: string) {
     console.log('in userinfo');
     const prompt = "msg:"+userMsg;
     const ourPrompt = "Respond to the users message by acknowledging the details they mentioned and prompt them to log their weekly goals using /weeklygoals at the beginning of their message"
@@ -43,8 +46,12 @@ async function processUserInfo(userMsg: string, gpt: GPT = new GPT()) {
         role:"assistant",
         content: instruction
     }
-    const completion = await gpt.callGPT(chat);
-    return completion.choices[0].message.content;
+    try{
+        const completion = await gpt.callGPT(chat);
+        return completion.choices[0].message.content;
+    }catch(error){
+        return errorHandler();
+    }
 }
 
 async function processBadMsg(){
@@ -76,8 +83,6 @@ bot.on("message", async (ctx)=>{
             res = await processUserInfo(msg);
             if(res){
                 await ctx.reply(res);
-            }else{
-                await ctx.reply(errorHandler());
             }
         } else {
            res = processBadMsg();
