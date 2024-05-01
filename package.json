@@ -1,0 +1,9 @@
+{
+  "scripts":{
+    "start":"ts-node ./KFbot.ts",
+    "dev": "ts-node-dev ./KFbot.ts"
+  },
+  "dependencies": {
+    "grammy": "^1.22.4"
+  }
+}
