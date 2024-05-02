@@ -8,7 +8,7 @@ const bot = new Bot("7107203567:AAFse2-JV0wRB86tcP_M5KoonKFYPUFUA6E");
 const gpt = GPT.getInstance();
 
 //Help Menu Command
-const helpMenu = "<b>Help Menu ⚙️</b>\nHere are the commands that allow you to log entries:\n\n \\pretrg for Pre Training Entries\n\n \\posttrg for Post Training Entries\n\n \\weeklygoals for Weekly Goal Entries\n\n For any bug reports or other concerns please reach out to: kaizenflotech@gmail.com";
+const helpMenu = "<b>Help Menu ⚙️</b>\nHere are the commands that allow you to log entries:\n\n \\pretrg for Pre Training Entries\n\n \\posttrg for Post Training Entries\n\n \\weeklygoals for Weekly Goal Entries\n\nFor any bug reports or other concerns please reach out to: kaizenflotech@gmail.com";
 bot.command("help", async (ctx) => {
     await ctx.reply(helpMenu, {
         parse_mode: "HTML",
@@ -26,10 +26,38 @@ bot.command("start", async (ctx) => {
 //Processing user messages
 async function processPreTrg(userMsg: string){
     console.log('in pretrg');
+    const prompt = "msg:"+userMsg;
+    const ourPrompt = "Respond by acknowledging their plan, motivating them, and end it by saying you're looking forward to hearing from them in their /posttrg entry."
+    const instruction = prompt + "\n\n" + ourPrompt;
+    console.log(instruction);
+    const chat = {
+        role:"assistant",
+        content: instruction
+    }
+    try{
+        const completion = await gpt.callGPT(chat);
+        return completion.choices[0].message.content;
+    }catch(error){
+        return errorHandler();
+    }
 }
 
 async function processPostTrg(userMsg: string){
     console.log('in posttrg');
+    const prompt = "msg:"+userMsg;
+    const ourPrompt = "Respond by acknowledging what happened in the session in a supportive manner. Give some questions that will lead them to think deeper about the session and what they can do better next session. End it by telling them to log it in /pretrg tomorrow."
+    const instruction = prompt + "\n\n" + ourPrompt;
+    console.log(instruction);
+    const chat = {
+        role:"assistant",
+        content: instruction
+    }
+    try{
+        const completion = await gpt.callGPT(chat);
+        return completion.choices[0].message.content;
+    }catch(error){
+        return errorHandler();
+    }
 }
 
 async function processWeeklyGoals(userMsg: string){
@@ -103,8 +131,14 @@ bot.on("message", async (ctx)=>{
         let res;
         if (/^\/pretrg\b/.test(msg)) {
             res = await processPreTrg(msg);
+            if(res){
+                await ctx.reply(res);
+            }
         } else if (/^\/posttrg\b/.test(msg)) {
             res = await processPostTrg(msg);
+            if(res){
+                await ctx.reply(res);
+            }
         } else if (/^\/weeklygoals\b/.test(msg)) {
             res = await processWeeklyGoals(msg);
             if(res){
