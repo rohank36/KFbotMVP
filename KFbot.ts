@@ -1,5 +1,18 @@
 import { Bot, InlineKeyboard } from "grammy";
 import { GPT } from './gpt';
+import { Database } from './mongo';
+
+//Init MongoDB instance
+let db;
+async function connectDB(){
+    try{
+        const dbInstance = await Database.getInstance();
+        db = dbInstance.getDb();
+    }catch(error){
+        console.error("Failed to connect bot to database:", error);
+    }
+}
+connectDB();
 
 //Init bot 
 const bot = new Bot("7107203567:AAFse2-JV0wRB86tcP_M5KoonKFYPUFUA6E");
