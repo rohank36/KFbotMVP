@@ -3,7 +3,6 @@ import OpenAI from "openai";
 interface Message {
     role: string;
     content: string;
-    userMsg: string;
     type: string;
     userTelegramId: number;
 }

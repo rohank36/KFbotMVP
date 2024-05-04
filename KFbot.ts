@@ -2,6 +2,8 @@ import { Bot } from "grammy";
 import { GPT } from './gpt';
 import { Database } from './mongo';
 
+//TODO: Get rid of all unnecessary console.logs
+
 //Init MongoDB instance
 let db;
 async function connectDB(){
@@ -67,7 +69,6 @@ async function processUserMsg(userMsg: string, type: string, userTelegramId: num
     const chat = {
         role:"user",
         content: instruction,
-        userMsg: userMsg,
         type: type,
         userTelegramId: userTelegramId,
     }
