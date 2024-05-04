@@ -1,4 +1,4 @@
-import { Bot, InlineKeyboard } from "grammy";
+import { Bot } from "grammy";
 import { GPT } from './gpt';
 import { Database } from './mongo';
 
@@ -36,34 +36,40 @@ bot.command("start", async (ctx) => {
     });
 })
 
-//Processing user messages
-async function processPreTrg(userMsg: string){
-    console.log('in pretrg');
-    const prompt = "msg:"+userMsg;
-    const ourPrompt = "Respond by acknowledging their plan, motivating them, and end it by saying you're looking forward to hearing from them in their /posttrg entry."
-    const instruction = prompt + "\n\n" + ourPrompt;
-    console.log(instruction);
-    const chat = {
-        role:"assistant",
-        content: instruction
-    }
-    try{
-        const completion = await gpt.callGPT(chat);
-        return completion.choices[0].message.content;
-    }catch(error){
-        return errorHandler();
-    }
-}
+//Process User Messages
+async function processUserMsg(userMsg: string, type: string, userTelegramId: number){
+    let prompt = "msg:"+userMsg;
+    let ourPrompt;
+    switch (type) {
+        case 'pretrg':
+            ourPrompt = "Respond by acknowledging their plan, motivating them, and end it by saying you're looking forward to hearing from them in their /posttrg entry.";
+            break;
+    
+        case 'posttrg':
+            ourPrompt = "Respond by acknowledging what happened in the session in a supportive manner. Give some questions that will lead them to think deeper about the session and what they can do better next session. End it by telling them to log it in /pretrg tomorrow.";
+            break;
+    
+        case 'weeklygoals':
+            ourPrompt = "Acknowledge the users weekly goal message and prompt them to start thinking about how they will move closer to this goal each session during the week. End it by prompting them to log a /pretrg and /postrg entry, also note that you will message them if they forget.";
+            break;
+    
+        case 'userInfo':
+            ourPrompt = "Respond to the users message by acknowledging the details they mentioned and prompt them to log their weekly goals using /weeklygoals at the beginning of their message";
+            break;
 
-async function processPostTrg(userMsg: string){
-    console.log('in posttrg');
-    const prompt = "msg:"+userMsg;
-    const ourPrompt = "Respond by acknowledging what happened in the session in a supportive manner. Give some questions that will lead them to think deeper about the session and what they can do better next session. End it by telling them to log it in /pretrg tomorrow."
+        default:
+            // Handle badMsg type here
+            ourPrompt = "The user entered something without a tag. Acknowledge what they said but note that they have to use one of the valid tags: /pretrg, /posttrg, /weeklygoals. End by reminding them about the /help command in the menu."
+            break;
+    }
     const instruction = prompt + "\n\n" + ourPrompt;
     console.log(instruction);
     const chat = {
         role:"assistant",
-        content: instruction
+        content: instruction,
+        userMsg: userMsg,
+        type: type,
+        userTelegramId: userTelegramId,
     }
     try{
         const completion = await gpt.callGPT(chat);
@@ -71,60 +77,7 @@ async function processPostTrg(userMsg: string){
     }catch(error){
         return errorHandler();
     }
-}
-
-async function processWeeklyGoals(userMsg: string){
-    console.log('in weeklygoals');
-    const prompt = "msg:"+userMsg;
-    const ourPrompt = "Acknowledge the users weekly goal message and prompt them to start thinking about how they will move closer to this goal each session during the week. End it by prompting them to log a /pretrg and /postrg entry, also note that you will message them if they forget."
-    const instruction = prompt + "\n\n" + ourPrompt;
-    console.log(instruction);
-    const chat = {
-        role:"assistant",
-        content: instruction
-    }
-    try{
-        const completion = await gpt.callGPT(chat);
-        return completion.choices[0].message.content;
-    }catch(error){
-        return errorHandler();
-    }
-}
-
-async function processUserInfo(userMsg: string) {
-    console.log('in userinfo');
-    const prompt = "msg:"+userMsg;
-    const ourPrompt = "Respond to the users message by acknowledging the details they mentioned and prompt them to log their weekly goals using /weeklygoals at the beginning of their message"
-    const instruction = prompt + "\n\n" + ourPrompt;
-    console.log(instruction);
-    const chat = {
-        role:"assistant",
-        content: instruction
-    }
-    try{
-        const completion = await gpt.callGPT(chat);
-        return completion.choices[0].message.content;
-    }catch(error){
-        return errorHandler();
-    }
-}
-
-async function processBadMsg(userMsg: string){
-    console.log('bad message')
-    const prompt = "msg:"+userMsg;
-    const ourPrompt = "The user entered something without a tag. Acknowledge what they said but note that they have to use one of the valid tags: /pretrg, /posttrg, /weeklygoals. End by reminding them about the /help command in the menu."
-    const instruction = prompt + "\n\n" + ourPrompt;
-    console.log(instruction);
-    const chat = {
-        role:"assistant",
-        content: instruction
-    }
-    try{
-        const completion = await gpt.callGPT(chat);
-        return completion.choices[0].message.content;
-    }catch(error){
-        return errorHandler();
-    }
+    
 }
 
 function errorHandler(){
@@ -134,48 +87,36 @@ function errorHandler(){
 //message handler
 bot.on("message", async (ctx)=>{
     console.log(
-        `${ctx.from.first_name} wrote ${
+        `${ctx.from.first_name} ${ctx.from?.id} wrote ${
             "text" in ctx.message ? ctx.message.text : ""
         }`,
     );
 
-    if(ctx.message.text){
-        const msg = ctx.message.text.toLowerCase();
-        let res;
-        if (/^\/pretrg\b/.test(msg)) {
-            res = await processPreTrg(msg);
-            if(res){
-                await ctx.reply(res);
-            }
-        } else if (/^\/posttrg\b/.test(msg)) {
-            res = await processPostTrg(msg);
-            if(res){
-                await ctx.reply(res);
-            }
-        } else if (/^\/weeklygoals\b/.test(msg)) {
-            res = await processWeeklyGoals(msg);
-            if(res){
-                await ctx.reply(res);
-            }
-        } else if (/^\/userinfo\b/.test(msg)) {
-            res = await processUserInfo(msg);
-            if(res){
-                await ctx.reply(res);
-            }
-        } else {
-            res = await processBadMsg(msg);
-            if(res){
-                await ctx.reply(res);
-            }
-        }   
-        
-        /*
-        await ctx.reply(ctx.message.text.toUpperCase(), {
-            entities: ctx.message.entities,
-        });
-        */
-    }
+    //const chatId = ctx.chat.id;
+    //const userName = ctx.from.first_name;
+    const userTelegramId = ctx.from?.id;
+    let msg;
+    let res; 
 
+    if(ctx.chat?.type !== 'private'){
+        await ctx.reply("Please start a private chat with this bot.");
+    }else{
+        if(ctx.message.text){
+            msg = ctx.message.text.toLowerCase();
+            if (/^\/pretrg\b/.test(msg)) {
+                res = await processUserMsg(msg, 'pretrg', userTelegramId);
+            } else if (/^\/posttrg\b/.test(msg)) {
+                res = await processUserMsg(msg, 'posttrg', userTelegramId);
+            } else if (/^\/weeklygoals\b/.test(msg)) {
+                res = await processUserMsg(msg, 'weeklygoals', userTelegramId);
+            } else if (/^\/userinfo\b/.test(msg)) {
+                res = await processUserMsg(msg, 'userInfo', userTelegramId);
+            } else {
+                res = await processUserMsg(msg, 'badMsg', userTelegramId);
+            } 
+            if(res) await ctx.reply(res);
+        }
+    }
 })
   
 //Start bot

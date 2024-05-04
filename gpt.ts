@@ -3,6 +3,9 @@ import OpenAI from "openai";
 interface Message {
     role: string;
     content: string;
+    userMsg: string;
+    type: string;
+    userTelegramId: number;
 }
 export class GPT {
     private static instance: GPT;
@@ -21,6 +24,7 @@ export class GPT {
     }
 
     loadMessages(messages: Message): any{
+        console.log(messages);
         return [
             { role: "system", content: this.sysInstruction },
             { role: messages.role, content: messages.content }
