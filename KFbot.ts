@@ -65,7 +65,7 @@ async function processUserMsg(userMsg: string, type: string, userTelegramId: num
     const instruction = prompt + "\n\n" + ourPrompt;
     console.log(instruction);
     const chat = {
-        role:"assistant",
+        role:"user",
         content: instruction,
         userMsg: userMsg,
         type: type,
@@ -99,7 +99,7 @@ bot.on("message", async (ctx)=>{
     let res; 
 
     if(ctx.chat?.type !== 'private'){
-        await ctx.reply("Please start a private chat with this bot.");
+        await ctx.reply("Please start a private chat with this bot."); //TODO: Add bot to grp and check to see if it replies properly
     }else{
         if(ctx.message.text){
             msg = ctx.message.text.toLowerCase();
