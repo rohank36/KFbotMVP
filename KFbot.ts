@@ -39,7 +39,7 @@ bot.command("start", async (ctx) => {
 })
 
 //Process User Messages
-async function processUserMsg(userMsg: string, type: string, userTelegramId: number){
+async function processUserMsg(userMsg: string, type: string, telegramId: number){
     let prompt = "msg:"+userMsg;
     let ourPrompt;
     switch (type) {
@@ -70,7 +70,7 @@ async function processUserMsg(userMsg: string, type: string, userTelegramId: num
         role:"user",
         content: instruction,
         type: type,
-        userTelegramId: userTelegramId,
+        telegramId: telegramId,
     }
     try{
         const completion = await gpt.callGPT(chat);
@@ -95,7 +95,7 @@ bot.on("message", async (ctx)=>{
 
     //const chatId = ctx.chat.id;
     //const userName = ctx.from.first_name;
-    const userTelegramId = ctx.from?.id;
+    const telegramId = ctx.from?.id;
     let msg;
     let res; 
 
@@ -105,15 +105,15 @@ bot.on("message", async (ctx)=>{
         if(ctx.message.text){
             msg = ctx.message.text.toLowerCase();
             if (/^\/pretrg\b/.test(msg)) {
-                res = await processUserMsg(msg, 'pretrg', userTelegramId);
+                res = await processUserMsg(msg, 'pretrg', telegramId);
             } else if (/^\/posttrg\b/.test(msg)) {
-                res = await processUserMsg(msg, 'posttrg', userTelegramId);
+                res = await processUserMsg(msg, 'posttrg', telegramId);
             } else if (/^\/weeklygoals\b/.test(msg)) {
-                res = await processUserMsg(msg, 'weeklygoals', userTelegramId);
+                res = await processUserMsg(msg, 'weeklygoals', telegramId);
             } else if (/^\/userinfo\b/.test(msg)) {
-                res = await processUserMsg(msg, 'userInfo', userTelegramId);
+                res = await processUserMsg(msg, 'userInfo', telegramId);
             } else {
-                res = await processUserMsg(msg, 'badMsg', userTelegramId);
+                res = await processUserMsg(msg, 'badMsg', telegramId);
             } 
             if(res) await ctx.reply(res);
         }
