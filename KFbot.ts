@@ -58,6 +58,10 @@ async function processUserMsg(userMsg: string, type: string, telegramId: number)
         case 'userInfo':
             ourPrompt = "Respond to the users message by acknowledging the details they mentioned and prompt them to log their weekly goals using /weeklygoals at the beginning of their message";
             break;
+            
+        case 'summary':
+            ourPrompt= "";
+            break;
 
         default:
             // Handle badMsg type here
@@ -71,6 +75,7 @@ async function processUserMsg(userMsg: string, type: string, telegramId: number)
         content: instruction,
         type: type,
         telegramId: telegramId,
+        userMsg: userMsg,
     }
     try{
         const completion = await gpt.callGPT(chat);
@@ -112,7 +117,9 @@ bot.on("message", async (ctx)=>{
                 res = await processUserMsg(msg, 'weeklygoals', telegramId);
             } else if (/^\/userinfo\b/.test(msg)) {
                 res = await processUserMsg(msg, 'userInfo', telegramId);
-            } else {
+            } else if (/^\/summary\b/.test(msg)){
+                res = await processUserMsg(msg, 'summary', telegramId);
+            }else {
                 res = await processUserMsg(msg, 'badMsg', telegramId);
             } 
             if(res) await ctx.reply(res);

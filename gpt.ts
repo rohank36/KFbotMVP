@@ -1,18 +1,20 @@
 import OpenAI from "openai";
 import Message from "./schemas/message";
 import Weekly from "./schemas/weekly";
+import User from "./schemas/user";
 
 interface Message {
     role: string;
     content: string;
     type: string;
     telegramId: number;
+    userMsg: string,
 }
 export class GPT {
     private static instance: GPT;
     private openai: OpenAI;
     public readonly sysInstruction: string = "You are a brazilian jiu jitsu’s athletes companion that will join the user on their journey and guide them through thought-provoking questions to make them feel in control of their jiu jitsu progress and as if they are improving. Your tone should mimic someone who has known the athlete for an extended period of time and who genuinely cares about their lives and jiu jitsu progress. Your personality should be easy going and positive. You are a vehicle that enables our users to take action and improve their jiu jitsu by asking thoughtful questions. The user should feel like their jiu jitsu skills are growing."
-
+    public readonly summaryPrompt: string = "Send the user a summary of their week based on what they logged in the /weeklygoal, /pretrg, and /postrg entries. It should be encouraging and supportive - making the user feel like they are improving. End it by prompting them to enter their next weeks /weeklygoals, note that you will message them if they forget."
     private constructor(apiKey: string) {
         this.openai = new OpenAI({apiKey: apiKey});
     }
@@ -35,58 +37,140 @@ export class GPT {
             const savedMessage= await newMessage.save();
             return savedMessage._id;
         }catch(error){
+            console.log('Error in addToMessagesCollection: ', error);
             throw error;
         }
     }
 
-    async addToWeeklyCollection(savedMessageId: any, weeklyDocumentId: any){
+    async addToWeeklyCollection(savedMessageId: any, weekly: any, isSummary: boolean, telegramId: number){
         try{
-
+            const weekId = weekly!._id;
+            if(isSummary){
+                await Weekly.findByIdAndUpdate(weekId, { done: true }, { new: true });
+                const userInfo = weekly.user_info;
+                const chats: string[] = [];
+                chats.push(savedMessageId);
+                const newWeekly = new Weekly({
+                    telegramId: telegramId,
+                    chats: chats,
+                    user_info: userInfo,
+                })
+                await newWeekly.save();
+            }else{
+                weekly.chats.push(savedMessageId);
+                await Weekly.findByIdAndUpdate(weekId, {chats: weekly.chats}, {new: true});
+            }
+                
         }catch(error){
+            console.log('Error in addToWeeklyCollection: ', error);
             throw error;
         }
     }
 
     async loadWeekly(telegramId: Number){
         try{
-            //const weekly = await Weekly.findOne({telegramId: telegramId});
-            
-            //find all weekly documents with telegramId
-            //sort by timestamp and filter by !done.
-            //returns one weekly document that matches the search criteria
+            const weekly = await Weekly.findOne({telegramId: telegramId, done: false});
+            if(!weekly){
+                console.log("no weekly found, creating new weekly");
+                const user = await User.findOne({telegramId});
+                const userInfo = user.user_info;
+                const newWeekly = new Weekly({
+                    telegramId: telegramId,
+                    user_info: userInfo,
+                });
+                const newWeeklySaved = await newWeekly.save();
+                return newWeeklySaved;
+            }else{
+                return weekly;
+            }
         }catch(error){
+            console.log('Error in loadWeekly: ', error);
             throw error;
         }
     }
 
-    async checkUser(){
-        // find user in db by telegramId
-        // if no user, create document. 
+    async checkUser(telegramId: Number, userInfo: any){
+        try{
+            const user = await User.findOne({telegramId: telegramId});
+            if(!user){
+                const newUser = new User({telegramId, userInfo});
+                await newUser.save();
+            } 
+        }catch(error){
+            console.log('Error in checkUser: ', error);
+            throw error;
+        }
         //TODO: add profile updating feature later 
     }
+    async loader(weekly: any): Promise<{}[]>{
+        try{
+            let returnArr: {}[] = [];
+            returnArr.push({role: "system", content: this.sysInstruction});
+            if(weekly.userInfo){
+                const userInfoId = weekly.userInfo;
+                const userInfo = await Message.findById({userInfoId});
+                if(userInfo){
+                    returnArr.push({role:"user", content: userInfo.msg});
+                    returnArr.push({role:"assistant", content: userInfo.res})
+                }
+            }
+            /*
+            if(weekly.weeklyGoal){
+                const goalId = weekly.weeklyGoal;
+                const goals = await Message.findById({goalId});
+                if(goals){
+                    returnArr.push({role:"user", content: goals.msg});
+                    returnArr.push({role:"assistant", content: goals.res})
+                }
+            }
+            */
+            for(const msgId of weekly.chats){
+                let msg = await Message.findById({msgId});
+                if(msg){
+                    returnArr.push({role:"user", content: msg.msg});
+                    returnArr.push({role:"assistant", content: msg.res})
+                }
+            }
+            return returnArr;
+        }catch(error){
+            console.log('Error in loader: ', error);
+            throw error;
+        }
+    }
 
-    loadMessages(message: Message): any{
-        // if message.type = userInfo 
-            // call checkUser()
-        //else
-            //call loadWeekly()
-                //if message.type = summary
-                    // load all messages + new msg to get summary 
-                    // add summary to cur weekly summary array, set done to true
-                    // create new weekly with user_info and [] of summaries from prev week with the new summary already added in.
-                // else build on current weekly
-                    // load user_info, all summaries (from oldest to most recent) and messages from current week + new msg
-                
-        console.log(message);
-        return [
-            { role: "system", content: this.sysInstruction },
-            { role: message.role, content: message.content }
-        ];
+    async loadMessages(message: Message): Promise<any>{
+        try{
+            if(message.type==='userInfo'){
+                await this.checkUser(message.telegramId, message.userMsg);
+            }
+            const weekly = await this.loadWeekly(message.telegramId);
+            const returnArr = await this.loader(weekly); //build the array with all the weekly info here.
+            if(message.type==='summary'){
+                returnArr.push({role:"user", content: this.summaryPrompt})
+            }else{
+                returnArr.push({role:"user", content: message.content});
+            }
+            console.log("Loaded Message: ", returnArr);
+            return returnArr;
+            /* 
+            console.log(message);
+            return [
+                { role: "system", content: this.sysInstruction },
+                { role: message.role, content: message.content }
+            ];
+            */
+        }catch(error){
+            console.log("Error in loadMessages: ", error);
+            throw error;
+        }
     }
 
     async callGPT(message: Message){
         try{
-            const cleanedMessage = this.loadMessages(message);
+            console.log("Message in GPT: ",message);
+            const isSummary = message.type === 'summary';
+            const telegramId = message.telegramId;
+            const cleanedMessage = await this.loadMessages(message);
             const response = await this.openai.chat.completions.create({
                 model: "gpt-3.5-turbo",
                 messages: cleanedMessage!,
@@ -97,11 +181,11 @@ export class GPT {
                 presence_penalty: 0,
             })
             const savedMessageId = await this.addToMessagesCollection(message, response.choices[0].message.content);
-            const weeklyDocument = await this.loadWeekly(message.telegramId);
-            //const weeklyDocumentId = weeklyDocument._id;
-            //await this.addToWeeklyCollection(savedMessageId, weeklyDocumentId);
+            const weekly = await this.loadWeekly(message.telegramId);
+            await this.addToWeeklyCollection(savedMessageId, weekly, isSummary, telegramId);
             return response;
         }catch(error){
+            console.log("Error in callGPt: ", error);
             throw error;
         }
     }

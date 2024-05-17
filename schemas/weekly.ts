@@ -3,11 +3,11 @@ import mongoose, { Schema } from "mongoose";
 const weeklySchema = new Schema(
     {
         telegramId:{type: Number, required: true, unique: true},
-        chats: {type: [String]},
+        chats: {type: [String], default: [String]},
         user_info: {type: String},
-        weeklyGoal: {type: String},
-        summary: {type: [String]},
-        done: {type: Boolean},
+        //weeklyGoal: {type: String},
+        //summary: {type: String},
+        done: {type: Boolean, default: false},
     },
     {timestamps: true }
 )
