@@ -1,10 +1,10 @@
 import { Bot } from "grammy";
 import { GPT } from './gpt';
-import { Database } from './mongo';
-
+import { Database } from './mongo'; //!!: Delete this later
+import mongoose, { connect } from "mongoose";
 //TODO: Get rid of all unnecessary console.logs
 
-//Init MongoDB instance
+/*
 let db;
 async function connectDB(){
     try{
@@ -12,6 +12,20 @@ async function connectDB(){
         db = dbInstance.getDb();
     }catch(error){
         console.error("Failed to connect bot to database:", error);
+    }
+}
+connectDB();
+*/
+
+//Connect to MongoDB via Mongoose 
+const uri = "mongodb+srv://rohankanti:Gogginsnow2527_@cluster0.zglu69c.mongodb.net/main?retryWrites=true&w=majority&appName=Cluster0";
+async function connectDB() {
+    try {
+        await mongoose.connect(uri);
+        console.log('Mongo connected...');
+    } catch (error) {
+        console.error('Mongo connection error:', error);
+        throw error;
     }
 }
 connectDB();
@@ -81,6 +95,7 @@ async function processUserMsg(userMsg: string, type: string, telegramId: number)
         const completion = await gpt.callGPT(chat);
         return completion.choices[0].message.content;
     }catch(error){
+        console.log("error in processUserMsg: ",error);
         return errorHandler();
     }
     
