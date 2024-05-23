@@ -2,7 +2,7 @@ import mongoose, { Schema } from "mongoose";
 
 const messageSchema = new Schema(
     {
-        telegramId:{type: String, required: true, unique: true},
+        telegramId:{type: String, required: true},
         type: {type: String, required: true},
         msg: {type: String, required: true},
         res: {type: String, required: true},

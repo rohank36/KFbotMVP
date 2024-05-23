@@ -3,7 +3,7 @@ import mongoose, { Schema } from "mongoose";
 const userSchema = new Schema(
     {
         telegramId:{type: Number, required: true, unique: true},
-        userInfo: {type: String, required: true},
+        user_info: {type: String, required: true},
     }
 )
 

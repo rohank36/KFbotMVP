@@ -2,8 +2,8 @@ import mongoose, { Schema } from "mongoose";
 
 const weeklySchema = new Schema(
     {
-        telegramId:{type: Number, required: true, unique: true},
-        chats: {type: [String], default: [String]},
+        telegramId:{type: Number, required: true},
+        chats: {type: [String], default: []},
         user_info: {type: String},
         //weeklyGoal: {type: String},
         //summary: {type: String},

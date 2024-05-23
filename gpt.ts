@@ -27,6 +27,7 @@ export class GPT {
     }
 
     async addToMessagesCollection(message: Message, gptRes: string|null){
+        if(message.type === 'badMsg') return;
         try{
             const newMessage = new Message({
                 telegramId: message.telegramId,
@@ -49,7 +50,7 @@ export class GPT {
                 await Weekly.findByIdAndUpdate(weekId, { done: true }, { new: true });
                 const userInfo = weekly.user_info;
                 const chats: string[] = [];
-                chats.push(savedMessageId);
+                if(savedMessageId) chats.push(savedMessageId);
                 const newWeekly = new Weekly({
                     telegramId: telegramId,
                     chats: chats,
@@ -57,7 +58,7 @@ export class GPT {
                 })
                 await newWeekly.save();
             }else{
-                weekly.chats.push(savedMessageId);
+                if(savedMessageId) weekly.chats.push(savedMessageId);
                 await Weekly.findByIdAndUpdate(weekId, {chats: weekly.chats}, {new: true});
             }
                 
@@ -93,7 +94,7 @@ export class GPT {
         try{
             const user = await User.findOne({telegramId: telegramId});
             if(!user){
-                const newUser = new User({telegramId, userInfo});
+                const newUser = new User({telegramId, user_info:userInfo});
                 await newUser.save();
             } 
         }catch(error){
@@ -106,12 +107,10 @@ export class GPT {
         try{
             let returnArr: {}[] = [];
             returnArr.push({role: "system", content: this.sysInstruction});
-            if(weekly.userInfo){
-                const userInfoId = weekly.userInfo;
-                const userInfo = await Message.findById({userInfoId});
+            if(weekly.user_info){
+                const userInfo = weekly.user_info;
                 if(userInfo){
-                    returnArr.push({role:"user", content: userInfo.msg});
-                    returnArr.push({role:"assistant", content: userInfo.res})
+                    returnArr.push({role:"user", content: userInfo});
                 }
             }
             /*
@@ -124,11 +123,13 @@ export class GPT {
                 }
             }
             */
-            for(const msgId of weekly.chats){
-                let msg = await Message.findById({msgId});
-                if(msg){
-                    returnArr.push({role:"user", content: msg.msg});
-                    returnArr.push({role:"assistant", content: msg.res})
+            if(weekly.chats){
+                for(const msgId of weekly.chats){
+                    let msg = await Message.findById(msgId);
+                    if(msg && msg.type !== 'badMsg'){
+                        returnArr.push({role:"user", content: msg.msg});
+                        returnArr.push({role:"assistant", content: msg.res})
+                    }
                 }
             }
             return returnArr;
@@ -144,6 +145,7 @@ export class GPT {
                 await this.checkUser(message.telegramId, message.userMsg);
             }
             const weekly = await this.loadWeekly(message.telegramId);
+            console.log("weekly: ", weekly);
             const returnArr = await this.loader(weekly); //build the array with all the weekly info here.
             if(message.type==='summary'){
                 returnArr.push({role:"user", content: this.summaryPrompt})
@@ -152,13 +154,6 @@ export class GPT {
             }
             console.log("Loaded Message: ", returnArr);
             return returnArr;
-            /* 
-            console.log(message);
-            return [
-                { role: "system", content: this.sysInstruction },
-                { role: message.role, content: message.content }
-            ];
-            */
         }catch(error){
             console.log("Error in loadMessages: ", error);
             throw error;
