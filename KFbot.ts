@@ -3,9 +3,10 @@ import { GPT } from './gpt';
 import mongoose, { connect } from "mongoose";
 import cron from "node-cron";
 import summaryCronJob from "./cronjob";
+import { BOT_TOKEN, MONGODB_URI } from "./config";
 
 //Connect to MongoDB via Mongoose 
-const uri = "mongodb+srv://rohankanti:Gogginsnow2527_@cluster0.zglu69c.mongodb.net/main?retryWrites=true&w=majority&appName=Cluster0";
+const uri = MONGODB_URI;
 async function connectDB() {
     try {
         await mongoose.connect(uri);
@@ -18,7 +19,7 @@ async function connectDB() {
 connectDB();
 
 //Init bot 
-const bot = new Bot("7107203567:AAFse2-JV0wRB86tcP_M5KoonKFYPUFUA6E");
+const bot = new Bot(BOT_TOKEN);
 
 //Init GPT instance
 const gpt = GPT.getInstance();

@@ -1,8 +1,6 @@
 import OpenAI from "openai";
-import Message from "./schemas/message";
-import Weekly from "./schemas/weekly";
-import User from "./schemas/user";
-import {ops} from "./ops";
+import { ops } from "./ops";
+import { GPT_TOKEN } from "./config";
 
 interface Message {
     role: string;
@@ -21,7 +19,7 @@ export class GPT {
 
     public static getInstance(): GPT {
         if (!GPT.instance) {
-            GPT.instance = new GPT("sk-proj-Q6P738mhT4CkWFxDusTCT3BlbkFJfpDZTJO4bx8PqnfwvFcr");
+            GPT.instance = new GPT(GPT_TOKEN);
         }
         return GPT.instance;
     }
