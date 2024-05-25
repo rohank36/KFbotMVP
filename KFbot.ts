@@ -1,17 +1,18 @@
 import { Bot } from "grammy";
 import { GPT } from './gpt';
-import { Database } from './mongo';
+import mongoose, { connect } from "mongoose";
+import cron from "node-cron";
+import summaryCronJob from "./cronjob";
 
-//TODO: Get rid of all unnecessary console.logs
-
-//Init MongoDB instance
-let db;
-async function connectDB(){
-    try{
-        const dbInstance = await Database.getInstance();
-        db = dbInstance.getDb();
-    }catch(error){
-        console.error("Failed to connect bot to database:", error);
+//Connect to MongoDB via Mongoose 
+const uri = "mongodb+srv://rohankanti:Gogginsnow2527_@cluster0.zglu69c.mongodb.net/main?retryWrites=true&w=majority&appName=Cluster0";
+async function connectDB() {
+    try {
+        await mongoose.connect(uri);
+        console.log('Mongo connected...');
+    } catch (error) {
+        console.error('Mongo connection error:', error);
+        throw error;
     }
 }
 connectDB();
@@ -21,6 +22,12 @@ const bot = new Bot("7107203567:AAFse2-JV0wRB86tcP_M5KoonKFYPUFUA6E");
 
 //Init GPT instance
 const gpt = GPT.getInstance();
+
+//Cron Job
+cron.schedule('0 18 * * 0',() => summaryCronJob(gpt, bot), {
+    scheduled: true,
+    timezone: "America/New_York"
+});
 
 //Help Menu Command
 const helpMenu = "<b>Help Menu ⚙️</b>\nHere are the commands that allow you to log entries:\n\n \\pretrg for Pre Training Entries\n\n \\posttrg for Post Training Entries\n\n \\weeklygoals for Weekly Goal Entries\n\nFor any bug reports or other concerns please reach out to: kaizenflotech@gmail.com";
@@ -58,10 +65,6 @@ async function processUserMsg(userMsg: string, type: string, telegramId: number)
         case 'userInfo':
             ourPrompt = "Respond to the users message by acknowledging the details they mentioned and prompt them to log their weekly goals using /weeklygoals at the beginning of their message";
             break;
-            
-        case 'summary':
-            ourPrompt= "";
-            break;
 
         default:
             // Handle badMsg type here
@@ -69,7 +72,6 @@ async function processUserMsg(userMsg: string, type: string, telegramId: number)
             break;
     }
     const instruction = prompt + "\n\n" + ourPrompt;
-    console.log(instruction);
     const chat = {
         role:"user",
         content: instruction,
@@ -81,6 +83,7 @@ async function processUserMsg(userMsg: string, type: string, telegramId: number)
         const completion = await gpt.callGPT(chat);
         return completion.choices[0].message.content;
     }catch(error){
+        console.log("error in processUserMsg: ",error);
         return errorHandler();
     }
     
@@ -92,12 +95,6 @@ function errorHandler(){
 
 //message handler
 bot.on("message", async (ctx)=>{
-    console.log(
-        `${ctx.from.first_name} ${ctx.from?.id} wrote ${
-            "text" in ctx.message ? ctx.message.text : ""
-        }`,
-    );
-
     //const chatId = ctx.chat.id;
     //const userName = ctx.from.first_name;
     const telegramId = ctx.from?.id;
@@ -117,8 +114,6 @@ bot.on("message", async (ctx)=>{
                 res = await processUserMsg(msg, 'weeklygoals', telegramId);
             } else if (/^\/userinfo\b/.test(msg)) {
                 res = await processUserMsg(msg, 'userInfo', telegramId);
-            } else if (/^\/summary\b/.test(msg)){
-                res = await processUserMsg(msg, 'summary', telegramId);
             }else {
                 res = await processUserMsg(msg, 'badMsg', telegramId);
             } 
