@@ -1,0 +1,50 @@
+name: Main
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "latest"
+      - run: npm ci
+      - name: Build
+        run: npm run build
+      - uses: actions/upload-artifact@v3
+        with:
+          name: source
+          path: |
+            dist/*.js
+            package.json
+            package-lock.json
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: source
+          path: dist/
+      - name: Deploy
+        uses: easingthemes/ssh-deploy@v4
+        env:
+          SOURCE: "dist package.json package-lock.json"
+          ARGS: "--delete -az"
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+          REMOTE_USER: ${{ secrets.REMOTE_USER }}
+          TARGET: "~/app/KFbotMVP"
+          SCRIPT_AFTER: |
+            cd /root/app/KFbotMVP
+            npm i --omit=dev
+            systemctl restart kfbot-mvp1.service
+
